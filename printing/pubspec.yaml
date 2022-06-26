@@ -6,14 +6,14 @@ description: >
 homepage: https://github.com/DavBfr/dart_pdf/tree/master/printing
 repository: https://github.com/DavBfr/dart_pdf
 issue_tracker: https://github.com/DavBfr/dart_pdf/issues
-version: 5.9.2
+version: 5.9.2-dev
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
   flutter: ">=1.16.0"
 
 dependencies:
-  ffi: ^1.1.0
+  ffi: ">=2.0.0 <3.0.0"
   flutter:
     sdk: flutter
   flutter_web_plugins:
