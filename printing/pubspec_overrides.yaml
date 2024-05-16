@@ -1,4 +1,6 @@
-# melos_managed_dependency_overrides: pdf
+# melos_managed_dependency_overrides: pdf,http,meta
 dependency_overrides:
   pdf:
     path: ../pdf
+  http: ^1.2.1
+  meta: ^1.12.0
