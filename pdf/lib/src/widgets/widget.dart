@@ -25,6 +25,7 @@ import 'document.dart';
 import 'geometry.dart';
 import 'multi_page.dart';
 import 'page.dart';
+import 'text_style.dart';
 import 'theme.dart';
 
 @immutable
@@ -146,7 +147,7 @@ abstract class Widget {
     PdfGraphics? canvas,
     BoxConstraints? constraints,
     required PdfPoint offset,
-    Alignment? alignment,
+    AlignmentGeometry? alignment,
     Context? context,
   }) {
     context ??= Context(
@@ -165,7 +166,8 @@ abstract class Widget {
     assert(widget.box != null);
 
     if (alignment != null) {
-      final d = alignment.withinRect(widget.box!);
+      final resolvedAlignment = alignment.resolve(Directionality.of(context));
+      final d = resolvedAlignment.withinRect(widget.box!);
       offset = PdfPoint(offset.x - d.x, offset.y - d.y);
     }
 

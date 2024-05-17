@@ -1,5 +1,27 @@
 # Changelog
 
+## 5.13.0
+
+- Migrate to package:web and dart:js_interop
+- Set Flutter 3.19 as minimal version
+- Fix lints
+
+## 5.12.0
+
+- Refactor html imports
+- Implement PdfActionBarTheme for actions bar and add method scrollToPage [Aleksei]
+- Update cursors in zoom mode for web [Aleksei]
+- Output image sized to cropBox instead of mediaBox (iOS) [garrettApproachableGeek]
+- Replace Activity with Context for Service Compatibility (Android) [Heinrich]
+- Deprecate support for `convertHtml`
+- Implement alternative location for PDF.js [Aleksei]
+
+## 5.11.1
+
+- Use pdfDpi on CPP lib
+- set PDFIUM_ARCH according to FLUTTER_TARGET_PLATFORM [nik012003]
+- Make pdf background transparent on windows and linux [Mohammad Rasim]
+
 ## 5.11.0
 
 - Set Flutter 3.10 as the minimum version

@@ -19,7 +19,9 @@ import 'dart:math' as math;
 import 'package:meta/meta.dart';
 
 import '../../pdf.dart';
+import '../pdf/font/arabic.dart' as arabic;
 import '../pdf/font/bidi_utils.dart' as bidi;
+import '../pdf/options.dart';
 import 'annotations.dart';
 import 'basic.dart';
 import 'document.dart';
@@ -32,7 +34,7 @@ import 'text_style.dart';
 import 'theme.dart';
 import 'widget.dart';
 
-enum TextAlign { left, right, center, justify }
+enum TextAlign { left, right, start, end, center, justify }
 
 enum TextDirection { ltr, rtl }
 
@@ -49,13 +51,11 @@ enum TextOverflow {
 }
 
 abstract class _Span {
-  _Span(this.style, this.realWidth);
+  _Span(this.style);
 
   final TextStyle style;
 
   var offset = PdfPoint.zero;
-
-  double realWidth;
 
   double get left;
 
@@ -105,13 +105,9 @@ class _TextDecoration {
       return _box;
     }
 
-    final x1 = spans[startSpan].offset.x +
-        spans[startSpan].left +
-        spans[startSpan].realWidth;
-    final x2 = spans[endSpan].offset.x +
-        spans[endSpan].left +
-        spans[endSpan].width -
-        spans[endSpan].realWidth;
+    final x1 = spans[startSpan].offset.x + spans[startSpan].left;
+    final x2 =
+        spans[endSpan].offset.x + spans[endSpan].left + spans[endSpan].width;
     var y1 = spans[startSpan].offset.y + spans[startSpan].top;
     var y2 = y1 + spans[startSpan].height;
 
@@ -265,7 +261,7 @@ class _Word extends _Span {
     this.text,
     TextStyle style,
     this.metrics,
-  ) : super(style, metrics.advanceWidth);
+  ) : super(style);
 
   final String text;
 
@@ -331,7 +327,7 @@ class _Word extends _Span {
 }
 
 class _WidgetSpan extends _Span {
-  _WidgetSpan(this.widget, TextStyle style, this.baseline) : super(style, 0);
+  _WidgetSpan(this.widget, TextStyle style, this.baseline) : super(style);
 
   final Widget widget;
 
@@ -586,38 +582,48 @@ class _Line {
     var delta = 0.0;
     switch (textAlign) {
       case TextAlign.left:
-        delta = isRTL ? totalWidth - wordsWidth : 0;
+        delta = isRTL ? wordsWidth : 0;
         break;
       case TextAlign.right:
-        delta = isRTL ? 0 : totalWidth - wordsWidth;
+        delta = isRTL ? totalWidth : totalWidth - wordsWidth;
+        break;
+      case TextAlign.start:
+        delta = isRTL ? totalWidth : 0;
+        break;
+      case TextAlign.end:
+        delta = isRTL ? wordsWidth : totalWidth - wordsWidth;
         break;
       case TextAlign.center:
         delta = (totalWidth - wordsWidth) / 2.0;
+        if (isRTL) {
+          delta += wordsWidth;
+        }
         break;
       case TextAlign.justify:
+        delta = isRTL ? totalWidth : 0;
         if (!justify) {
           break;
         }
 
-        delta = (totalWidth - wordsWidth) / (spans.length - 1);
+        final gap = (totalWidth - wordsWidth) / (spans.length - 1);
         var x = 0.0;
         for (final span in spans) {
-          if (isRTL) {
-            final xOffset = span.offset.x + span.width;
-            span.offset =
-                PdfPoint((totalWidth - xOffset) - x, span.offset.y - baseline);
-          } else {
-            span.offset = span.offset.translate(x, -baseline);
-          }
-          x += delta;
+          span.offset = PdfPoint(
+            isRTL
+                ? delta - x - (span.offset.x + span.width)
+                : span.offset.x + x,
+            span.offset.y - baseline,
+          );
+          x += gap;
         }
+
         return;
     }
 
     if (isRTL) {
       for (final span in spans) {
         span.offset = PdfPoint(
-          totalWidth - (span.offset.x + span.width) - delta,
+          delta - (span.offset.x + span.width),
           span.offset.y - baseline,
         );
       }
@@ -627,8 +633,6 @@ class _Line {
     for (final span in spans) {
       span.offset = span.offset.translate(delta, -baseline);
     }
-
-    return;
   }
 }
 
@@ -656,6 +660,8 @@ class RichTextContext extends WidgetContext {
       '$runtimeType Offset: $startOffset -> $endOffset  Span: $spanStart -> $spanEnd';
 }
 
+typedef Hyphenation = List<String> Function(String word);
+
 class RichText extends Widget with SpanningWidget {
   RichText({
     required this.text,
@@ -666,6 +672,7 @@ class RichText extends Widget with SpanningWidget {
     this.textScaleFactor = 1.0,
     this.maxLines,
     this.overflow = TextOverflow.visible,
+    this.hyphenation,
   });
 
   static bool debug = false;
@@ -697,6 +704,8 @@ class RichText extends Widget with SpanningWidget {
   var _mustClip = false;
 
   List<InlineSpan>? _preprocessed;
+
+  final Hyphenation? hyphenation;
 
   void _appendDecoration(bool append, _TextDecoration td) {
     if (append && _decorations.isNotEmpty) {
@@ -882,11 +891,7 @@ class RichText extends Widget with SpanningWidget {
     final _softWrap = softWrap ?? theme.softWrap;
     final _maxLines = maxLines ?? theme.maxLines;
     final _textDirection = textDirection ?? Directionality.of(context);
-    _textAlign = textAlign ??
-        theme.textAlign ??
-        (_textDirection == TextDirection.rtl
-            ? TextAlign.right
-            : TextAlign.left);
+    _textAlign = textAlign ?? theme.textAlign ?? TextAlign.start;
 
     final _overflow = this.overflow ?? theme.overflow;
 
@@ -925,9 +930,11 @@ class RichText extends Widget with SpanningWidget {
           final space =
               font.stringMetrics(' ') * (style.fontSize! * textScaleFactor);
 
-          final spanLines = (_textDirection == TextDirection.rtl
-                  ? bidi.logicalToVisual(span.text!)
-                  : span.text)!
+          final spanLines = (useArabic && _textDirection == TextDirection.rtl
+                  ? arabic.convert(span.text!)
+                  : useBidi && _textDirection == TextDirection.rtl
+                      ? bidi.logicalToVisual(span.text!)
+                      : span.text)!
               .split('\n');
 
           for (var line = 0; line < spanLines.length; line++) {
@@ -948,6 +955,32 @@ class RichText extends Widget with SpanningWidget {
 
               if (_softWrap &&
                   offsetX + metrics.width > constraintWidth + 0.00001) {
+                if (hyphenation != null) {
+                  final syllables = hyphenation!(word);
+                  if (syllables.length > 1) {
+                    var fits = '';
+                    for (var syllable in syllables) {
+                      if (offsetX +
+                              ((font.stringMetrics('$fits$syllable-',
+                                          letterSpacing: style.letterSpacing! /
+                                              (style.fontSize! *
+                                                  textScaleFactor)) *
+                                      (style.fontSize! * textScaleFactor))
+                                  .width) >
+                          constraintWidth + 0.00001) {
+                        break;
+                      }
+                      fits += syllable;
+                    }
+                    if (fits.isNotEmpty) {
+                      words[index] = '$fits-';
+                      words.insert(index + 1, word.substring(fits.length));
+                      index--;
+                      continue;
+                    }
+                  }
+                }
+
                 if (spanCount > 0 && metrics.width <= constraintWidth) {
                   overflow = true;
                   lines.add(_Line(
@@ -1043,7 +1076,8 @@ class RichText extends Widget with SpanningWidget {
               if (spanCount > 0) {
                 offsetY += bottom - top;
               } else {
-                offsetY += space.ascent + space.descent;
+                offsetY +=
+                    font.emptyLineHeight * style.fontSize! * textScaleFactor;
               }
               top = 0;
               bottom = 0;
