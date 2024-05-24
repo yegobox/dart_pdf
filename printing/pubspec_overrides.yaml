@@ -1,0 +1,8 @@
+# melos_managed_dependency_overrides: pdf,pdf_widget_wrapper,http,meta
+dependency_overrides:
+  pdf:
+    path: ../pdf
+  pdf_widget_wrapper:
+    path: ../widget_wrapper
+  http: ^1.2.1
+  meta: ^1.12.0
