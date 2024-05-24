@@ -1,8 +1,0 @@
-# melos_managed_dependency_overrides: pdf,pdf_widget_wrapper,printing
-dependency_overrides:
-  pdf:
-    path: ../pdf
-  pdf_widget_wrapper:
-    path: ../widget_wrapper
-  printing:
-    path: ../printing
