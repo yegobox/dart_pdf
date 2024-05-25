@@ -81,21 +81,17 @@ class PdfPreviewPage extends StatelessWidget {
   final EdgeInsets? pageMargin;
 
   @override
+  @override
   Widget build(BuildContext context) {
-    final scrollbarTrack = Theme.of(context)
-            .scrollbarTheme
-            .thickness
-            ?.resolve({WidgetState.hovered}) ??
-        12;
-
+    // Remove the attempt to access scrollbarTrack
     return Container(
       margin: pageMargin ??
           EdgeInsets.only(
-            left: 8 + scrollbarTrack,
+            left: 8,
             top: 8,
-            right: 8 + scrollbarTrack,
+            right: 8,
             bottom: 12,
-          ),
+          ), // Adjust margins as needed
       decoration: pdfPreviewPageDecoration ??
           const BoxDecoration(
             color: Colors.white,
