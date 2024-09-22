@@ -81,36 +81,43 @@ printing/example/.metadata:
 	echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/><key>com.apple.security.cs.allow-jit</key><true/><key>com.apple.security.network.client</key><true/><key>com.apple.security.print</key><true/></dict></plist>' > printing/example/macos/Runner/Release.entitlements
 
 
-pdf/pubspec.lock: pdf/pubspec.yaml
+pdf/: pdf/pubspec.yaml
 	cd pdf; $(DART_BIN) pub get
 
-printing/pubspec.lock: printing/pubspec.yaml
+printing/: printing/pubspec.yaml
 	cd printing; $(FLUTTER_BIN) pub get
 
-demo/pubspec.lock: demo/pubspec.yaml
+demo/: demo/pubspec.yaml
 	cd demo; $(FLUTTER_BIN) pub get
 
-test/pubspec.lock: test/pubspec.yaml
+test/: test/pubspec.yaml
 	cd test; $(FLUTTER_BIN) pub get
 
-get: $(FONTS) pdf/pubspec.lock printing/pubspec.lock demo/pubspec.lock test/pubspec.lock
+get: $(FONTS) pdf/ printing/ demo/ test/
 
 get-all: $(FONTS) demo/assets/logo.svg demo/assets/profile.jpg get
 
+<<<<<<< HEAD
+test-pdf: svg $(FONTS) pdf/ .coverage
+	cd pdf; $(DART_BIN)  run --enable-asserts --pause-isolates-on-exit --disable-service-auth-codes --enable-vm-service=$(COV_PORT) test &\
+	$(DART_BIN)  pub global run coverage:collect_coverage --wait-paused --uri=http://127.0.0.1:$(COV_PORT)/ -o coverage.json --resume-isolates --scope-output=pdf
+	cd pdf; $(DART_BIN) pub global run coverage:format_coverage --packages=.dart_tool/package_config.json -i coverage.json --report-on lib --lcov --out lcov.info
+=======
 test-pdf: svg $(FONTS) pdf/pubspec.lock .coverage
 	cd pdf; $(DART_BIN)  test --coverage=coverage
 	cd pdf; $(DART_BIN) pub global run coverage:format_coverage --packages=.dart_tool/package_config.json -i coverage/test --report-on lib --lcov --out lcov.info
 	rm -rf pdf/coverage
+>>>>>>> refs/remotes/origin/master
 	cd pdf; for EXAMPLE in $(shell cd pdf; find example -name '*.dart'); do $(DART_BIN) $$EXAMPLE; done
 	test/compare-pdf.sh pdf test/golden
 
-test-printing: $(FONTS) printing/pubspec.lock .coverage
+test-printing: $(FONTS) printing/ .coverage
 	cd printing; $(FLUTTER_BIN) test --coverage --coverage-path lcov.info
 
-test-demo: $(FONTS) demo/pubspec.lock .coverage
+test-demo: $(FONTS) demo/ .coverage
 	cd demo; $(FLUTTER_BIN) test --coverage --coverage-path lcov.info
 
-test-readme: $(FONTS) test/pubspec.lock
+test-readme: $(FONTS) test/
 	cd test; $(DART_BIN) extract_readme.dart
 	cd test; $(DART_BIN) analyze
 
