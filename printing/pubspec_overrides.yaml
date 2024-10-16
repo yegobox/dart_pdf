@@ -4,5 +4,5 @@ dependency_overrides:
     path: ../pdf
   pdf_widget_wrapper:
     path: ../widget_wrapper
-  http: ^1.2.1
+  http: ^1.2.2
   meta: ^1.12.0
